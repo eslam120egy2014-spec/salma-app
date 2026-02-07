@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جنة سلمى 🌸</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0;
+            background: #0f0c29; /* لون ليلي عميق */
+            background: linear-gradient(to bottom, #24243e, #302b63, #0f0c29);
+            font-family: 'Cairo', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; overflow: hidden;
+        }
+
+        /* خلفية النجوم المتحركة */
+        .stars-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+        }
+
+        .glass-card {
+            position: relative; z-index: 1;
+            width: 90%; max-width: 380px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 30px rgba(255, 105, 180, 0.2);
+            text-align: center;
+        }
+
+        .profile-area img {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            border: 3px solid #ff007f;
+            box-shadow: 0 0 15px #ff007f;
+            margin-bottom: 10px;
+        }
+
+        h1 { color: #fff; font-size: 26px; font-weight: 900; margin: 10px 0; text-shadow: 0 0 10px #ff007f; }
+        
+        /* دائرة التقدم النيون */
+        .progress-box {
+            position: relative; width: 150px; height: 150px; margin: 20px auto;
+            display: flex; align-items: center; justify-content: center;
+        }
+        svg { width: 150px; height: 150px; transform: rotate(-90deg); }
+        circle {
+            fill: none; stroke-width: 10; stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+        .bg-circle { stroke: rgba(255, 255, 255, 0.1); }
+        .main-circle { stroke: #ff007f; filter: drop-shadow(0 0 8px #ff007f); }
+
+        .percentage {
+            position: absolute; font-size: 30px; font-weight: bold; color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* أزرار الصلاة النيون */
+        .prayer-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;
+        }
+
+        .p-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px; padding: 15px 5px;
+            color: #fff; cursor: pointer; transition: 0.3s;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            font-size: 14px;
+        }
+
+        .p-btn i { font-size: 20px; }
+        
+        /* حالة الضغط (تمت الصلاة) */
+        .p-btn.active {
+            background: rgba(255, 0, 127, 0.2);
+            border-color: #ff007f;
+            box-shadow: inset 0 0 10px #ff007f, 0 0 15px #ff007f;
+            transform: scale(0.95);
+        }
+
+        .stats-footer {
+            margin-top: 30px; display: flex; justify-content: space-around;
+            background: rgba(0, 0, 0, 0.3); border-radius: 25px; padding: 15px;
+        }
+        .stat { color: #aaa; font-size: 12px; }
+        .stat span { display: block; color: #00d2ff; font-size: 18px; font-weight: bold; text-shadow: 0 0 5px #00d2ff; }
+
+    </style>
+</head>
+<body>
+
+    <div class="stars-container" id="stars"></div>
+
+    <div class="glass-card">
+        <div class="profile-area">
+            <h1>عالم سلمى 🌸</h1>
+        </div>
+
+        <div class="progress-box">
+            <svg>
+                <circle class="bg-circle" cx="75" cy="75" r="65"></circle>
+                <circle id="prog-circle" class="main-circle" cx="75" cy="75" r="65" stroke-dasharray="408.4" stroke-dashoffset="408.4"></circle>
+            </svg>
+            <div class="percentage" id="percent-text">0%</div>
+        </div>
+
+        <div class="prayer-grid">
+            <button class="p-btn" onclick="toggleP('fajr', this)"><span>☀️</span>الفجر</button>
+            <button class="p-btn" onclick="toggleP('dhuhr', this)"><span>🕛</span>الظهر</button>
+            <button class="p-btn" onclick="toggleP('asr', this)"><span>⛅</span>العصر</button>
+            <button class="p-btn" onclick="toggleP('maghrib', this)"><span>🌅</span>المغرب</button>
+            <button class="p-btn" onclick="toggleP('isha', this)"><span>🌙</span>العشاء</button>
+            <button class="p-btn" onclick="toggleP('thikr', this)"><span>📿</span>أذكار</button>
+        </div>
+
+        <div class="stats-footer">
+            <div class="stat">النقاط <span id="pts">0</span></div>
+            <div class="stat">التزام <span id="stk">0</span> 🔥</div>
+        </div>
+    </div>
+
+<script>
+    // إنشاء خلفية النجوم المتحركة
+    const starsBox = document.getElementById('stars');
+    for(let i=0; i<50; i++) {
+        const star = document.createElement('div');
+        star.style.position = 'absolute';
+        star.style.width = '2px';
+        star.style.height = '2px';
+        star.style.background = '#fff';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.opacity = Math.random();
+        star.style.borderRadius = '50%';
+        starsBox.appendChild(star);
+    }
+
+    let pts = parseInt(localStorage.getItem('pts_ultra')) || 0;
+    let stk = parseInt(localStorage.getItem('stk_ultra')) || 0;
+    let logs = JSON.parse(localStorage.getItem('logs_ultra')) || {};
+    let today = new Date().toDateString();
+
+    if(localStorage.getItem('day_ultra') !== today) {
+        if(Object.keys(logs).length < 6) stk = 0;
+        logs = {};
+        localStorage.setItem('day_ultra', today);
+    }
+
+    function toggleP(id, btn) {
+        if(logs[id]) return;
+        
+        logs[id] = true;
+        pts += 15;
+        
+        // مؤثرات بصرية (بينك وبنفسجي)
+        confetti({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.7 },
+            colors: ['#ff007f', '#00d2ff', '#ffffff']
+        });
+
+        if(Object.keys(logs).length === 6) {
+            stk++; pts += 100;
+        }
+
+        save();
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('pts_ultra', pts);
+        localStorage.setItem('stk_ultra', stk);
+        localStorage.setItem('logs_ultra', JSON.stringify(logs));
+    }
+
+    function render() {
+        document.getElementById('pts').innerText = pts;
+        document.getElementById('stk').innerText = stk;
+        
+        let doneCount = Object.keys(logs).length;
+        let percent = Math.round((doneCount / 6) * 100);
+        
+        // تحريك دائرة النيون
+        const circle = document.getElementById('prog-circle');
+        const offset = 408.4 - (percent / 100) * 408.4;
+        circle.style.strokeDashoffset = offset;
+        document.getElementById('percent-text').innerText = percent + '%';
+
+        // تفعيل ألوان الأزرار
+        const buttons = document.querySelectorAll('.p-btn');
+        const tasks = ['الفجر','الظهر','العصر','المغرب','العشاء','أذكار'];
+        buttons.forEach(btn => {
+            let taskName = btn.innerText.replace(/[^ا-ي]/g, "");
+            // هنا بنطابق بالآي دي اللي باعتينه
+        });
+        
+        // تحديث الزراير النشطة
+        if(logs['fajr']) document.querySelectorAll('.p-btn')[0].classList.add('active');
+        if(logs['dhuhr']) document.querySelectorAll('.p-btn')[1].classList.add('active');
+        if(logs['asr']) document.querySelectorAll('.p-btn')[2].classList.add('active');
+        if(logs['maghrib']) document.querySelectorAll('.p-btn')[3].classList.add('active');
+        if(logs['isha']) document.querySelectorAll('.p-btn')[4].classList.add('active');
+        if(logs['thikr']) document.querySelectorAll('.p-btn')[5].classList.add('active');
+    }
+
+    render();
+</script>
+</body>
+</html>
